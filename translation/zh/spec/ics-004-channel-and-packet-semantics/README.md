@@ -1,22 +1,22 @@
 ---
 ics: '4'
 title: 通道和数据包语义
-stage: draft
+stage: 草案
 category: IBC/TAO
-kind: instantiation
+kind: 实例化
 requires: 2, 3, 5, 24
 author: Christopher Goes <cwgoes@tendermint.com>
 created: '2019-03-07'
 modified: '2019-08-25'
 ---
 
-## Synopsis
+## 概要
 
-The "channel" abstraction provides message delivery semantics to the interblockchain communication protocol, in three categories: ordering, exactly-once delivery, and module permissioning. A channel serves as a conduit for packets passing between a module on one chain and a module on another, ensuring that packets are executed only once, delivered in the order in which they were sent (if necessary), and delivered only to the corresponding module owning the other end of the channel on the destination chain. Each channel is associated with a particular connection, and a connection may have any number of associated channels, allowing the use of common identifiers and amortising the cost of header verification across all the channels utilising a connection & light client.
+“通道”抽象为块间链通信协议提供消息传递语义，分为三类：排序，一次发送和模块许可。通道充当数据包在一条链上的模块与另一条链上的模块之间传递的通道，从而确保数据包仅执行一次，并按照其发送顺序进行传递（如有必要），并仅传递给相应的模块拥有目标链上渠道的另一端。每个通道都与一个特定的连接相关联，并且一个连接可以具有任意数量的关联通道，从而允许使用公共标识符并利用连接和轻客户端在所有通道上分摊报头验证的成本。
 
-Channels are payload-agnostic. The modules which send and receive IBC packets decide how to construct packet data and how to act upon the incoming packet data, and must utilise their own application logic to determine which state transactions to apply according to what data the packet contains.
+通道与负载无关。发送和接收IBC数据包的模块决定如何构造数据包数据以及如何对传入的数据包数据进行操作，并且必须利用其自身的应用程序逻辑来根据数据包包含的数据确定要应用的状态事务。
 
-### Motivation
+### 动机
 
 链间通信协议使用跨链消息传递模型。 外部中继进程将 IBC * 数据包* 从一条链中继到另一条链。链 `A` 和链 `B` 独立地确认新的块，并且从一个链到另一个链的数据包可能会被任意延迟、审查或重新排序。数据包对于中继器是可见的，并且可以通过任何中继进程从链中读取，然后提交给任何其他链。
 
@@ -24,7 +24,7 @@ Channels are payload-agnostic. The modules which send and receive IBC packets de
 
 为了向应用层提供所需的排序、有且只有一次发送和模块许可语义，区块链间通信协议必须实现一种抽象以强制执行这些语义——通道就是这种抽象。
 
-### Definitions
+### 定义
 
 `ConsensusState` 在 [ICS 2](../ics-002-client-semantics) 中被定义.
 
@@ -32,19 +32,19 @@ Channels are payload-agnostic. The modules which send and receive IBC packets de
 
 `Port`和`authenticate`在[ICS 5](../ics-005-port-allocation)中被定义。
 
-`hash` is a generic collision-resistant hash function, the specifics of which must be agreed on by the modules utilising the channel.
+`hash`是一种通用的抗冲突哈希函数，其细节必须由使用通道的模块商定。
 
 `Identifier` ， `get` ， `set` ， `delete` ， `getCurrentHeight`和模块系统相关的原语在[ICS 24](../ics-024-host-requirements)中被定义。
 
 *通道*是用于在单独的区块链上的特定模块之间进行有且仅有一次数据包传递的管道，该模块至少具备数据包发送端和数据包接收端。
 
-A *bidirectional* channel is a channel where packets can flow in both directions: from `A` to `B` and from `B` to `A`.
+*双向*通道是数据包可以在两个方向上流动的通道：从`A`到`B`和从`B`到`A`
 
 *单向*通道是指数据包只能沿一个方向流动的通道：从`A`到`B` （或从`B`到`A` ，任意命名顺序）。
 
-An *ordered* channel is a channel where packets are delivered exactly in the order which they were sent.
+*有序*通道是指按照发送顺序完全传送数据包的通道。
 
-An *unordered* channel is a channel where packets can be delivered in any order, which may differ from the order in which they were sent.
+*无序*通道是指可以以任何顺序传送数据包的通道，该顺序可能与数据包的发送顺序不同。
 
 ```typescript
 enum ChannelOrder {
@@ -53,11 +53,11 @@ enum ChannelOrder {
 }
 ```
 
-Directionality and ordering are independent, so one can speak of a bidirectional unordered channel, a unidirectional ordered channel, etc.
+方向性和顺序是独立的，因此可以说是双向无序通道，单向有序通道等。
 
 所有通道均提供有且仅有一次的数据包传送，这意味着在通道的一端发送的数据包最终将不多于且不少于一次地传送到另一端。
 
-This specification only concerns itself with *bidirectional* channels. *Unidirectional* channels can use almost exactly the same protocol and will be outlined in a future ICS.
+该规范仅涉及*双向*通道。 *单向*通道可以使用几乎完全相同的协议，并将在以后的ICS中进行概述。
 
 通道的末端是一条链上存储通道元数据的数据结构：
 
@@ -72,8 +72,8 @@ interface ChannelEnd {
 }
 ```
 
-- The `state` is the current state of the channel end.
-- The `ordering` field indicates whether the channel is ordered or unordered.
+- `state`是通道端的当前状态。
+- `ordering`字段指示通道是有序的还是无序的。
 - `counterpartyPortIdentifier`标识通道另一端的对应链上的端口号。
 - `counterpartyChannelIdentifier`标识对应链的通道端。
 - `nextSequenceSend`是单独存储的，用于追踪下一个将要发送的数据包的序列号。
@@ -117,7 +117,7 @@ interface Packet {
 - `sourceChannel`标识发送链上的通道端。
 - `destPort`标识接收链上的端口号。
 - `destChannel`标识接收链上的通道端。
-- The `data` is an opaque value which can be defined by the application logic of the associated modules.
+- `data`是不透明的值，可以由关联模块的应用程序逻辑定义。
 
 请注意， `Packet`永远不会直接序列化。而是在某些函数调用中使用的中间结构，可能需要由调用 IBC 处理程序的模块来创建或处理该中间结构。
 
@@ -140,16 +140,16 @@ type OpaquePacket = object
 
 #### 按序
 
-- On ordered channels, packets should be sent and received in the same order: if packet *x* is sent before packet *y* by a channel end on chain `A`, packet *x* must be received before packet *y* by the corresponding channel end on chain `B`.
+- 在有序通道上，应按相同的顺序发送和接收数据包：如果数据包*x*在链`A`上的一个通道端在数据包*y*之前发送，则数据包*x*必须在数据链*y上*在相应的链束`B`通道端之前在数据包*y*之前接收。
 - 在无序通道上，可以以任何顺序发送和接收数据包。像有序数据包一样，无序数据包的超时是分别地对应目标链上的特定区块高度发生的。
 
-#### Permissioning
+#### 许可
 
 - 通道应该在握手期间被通道的两端都允许，并且此后不可变更（更高级别的逻辑可以通过标记端口的所有权来标记通道所有权）。只有与通道端关联的模块才能在其上发送或接收数据包。
 
-## Technical Specification
+## 技术指标
 
-### Dataflow visualisation
+### 数据流可视化
 
 客户端、连接、通道和数据包的体系结构：
 
@@ -157,7 +157,7 @@ type OpaquePacket = object
 
 ### Preliminaries
 
-#### Store paths
+#### 储存路径
 
 通道的结构存储在结合端口标识符和通道标识符的唯一的存储路径前缀下：
 
@@ -167,7 +167,7 @@ function channelPath(portIdentifier: Identifier, channelIdentifier: Identifier):
 }
 ```
 
-The capability key associated with a channel is stored under the `channelCapabilityPath`:
+与通道关联的功能密钥存储在`channelCapabilityPath` ：
 
 ```typescript
 function channelCapabilityPath(portIdentifier: Identifier, channelIdentifier: Identifier): Path {
@@ -187,7 +187,7 @@ function nextSequenceRecvPath(portIdentifier: Identifier, channelIdentifier: Ide
 }
 ```
 
-Constant-size commitments to packet data fields are stored under the packet sequence number:
+对数据包数据字段的恒定大小承诺存储在数据包序列号下：
 
 ```typescript
 function packetCommitmentPath(portIdentifier: Identifier, channelIdentifier: Identifier, sequence: uint64): Path {
@@ -197,7 +197,7 @@ function packetCommitmentPath(portIdentifier: Identifier, channelIdentifier: Ide
 
 0 位等同于存储中的路径的缺失。
 
-Packet acknowledgement data are stored under the `packetAcknowledgementPath`:
+数据包确认数据存储在`packetAcknowledgementPath` ：
 
 ```typescript
 function packetAcknowledgementPath(portIdentifier: Identifier, channelIdentifier: Identifier, sequence: uint64): Path {
@@ -207,18 +207,18 @@ function packetAcknowledgementPath(portIdentifier: Identifier, channelIdentifier
 
 无序通道必须始终向该路径写入确认信息（甚至是空的），使得此类确认的缺失可以用作超时证明。有序通道可以写一个确认信息，但不是必须的。
 
-### Versioning
+### 版本控制
 
 在握手过程中，通道的两端在与该通道关联的版本字节串上达成一致。 此版本字节串的内容对于 IBC 核心协议不透明。
 状态机主机可以利用版本数据来标示其支持的 IBC / APP 协议，认同数据包编码格式，或在 IBC 协议之上协商与自定义逻辑有关的其他通道元数据。
 
 状态机主机可以安全地忽略版本数据或指定一个空字符串。
 
-### Sub-protocols
+### 子协议
 
 > 注意：如果主机状态机正在使用对象能力认证（请参阅[ICS 005](../ics-005-port-allocation) ），则所有使用端口的功能都将带有附加能力参数。
 
-#### Identifier validation
+#### 标识符验证
 
 通道存储在唯一的`(portIdentifier, channelIdentifier)`前缀下。
 或将提供验证函数`validatePortIdentifier` 。
@@ -227,7 +227,7 @@ function packetAcknowledgementPath(portIdentifier: Identifier, channelIdentifier
 type validateChannelIdentifier = (portIdentifier: Identifier, channelIdentifier: Identifier) => boolean
 ```
 
-If not provided, the default `validateChannelIdentifier` function will always return `true`.
+如果未提供，默认的`validateChannelIdentifier`函数将始终返回`true` 。
 
 #### 通道生命周期管理
 
@@ -240,10 +240,10 @@ Relayer | ChanOpenTry | B | (INIT, none) | (INIT, TRYOPEN)
 Relayer | ChanOpenAck | A | (INIT, TRYOPEN) | (OPEN, TRYOPEN)
 Relayer | ChanOpenConfirm | B | (OPEN, TRYOPEN) | (OPEN, OPEN)
 
-Initiator | Datagram | 作用链 | Prior state (A, B) | 作用后状态（A，B）
+发起人 | 数据报 | 作用链 | 先前状态（A，B） | 作用后状态（A，B）
 --- | --- | --- | --- | ---
 参与者 | ChanCloseInit | A | (OPEN, OPEN) | (CLOSED, OPEN)
-Relayer | ChanCloseConfirm | B | (CLOSED, OPEN) | (CLOSED, CLOSED)
+Relayer | ChanCloseConfirm | B | (CLOSED, OPEN) | （关闭，关闭）
 
 ##### 建立握手
 
@@ -385,7 +385,7 @@ function chanOpenConfirm(
 }
 ```
 
-##### Closing handshake
+##### 关闭握手
 
 两个模块中的任意一个通过调用`chanCloseInit`函数来关闭其通道端。一旦一端关闭，通道将无法重新打开。
 
@@ -443,7 +443,7 @@ function chanCloseConfirm(
 }
 ```
 
-#### Packet flow & handling
+#### 数据包流和处理
 
 ![Packet State Machine](../../../../spec/ics-004-channel-and-packet-semantics/packet-state-machine.png)
 
@@ -468,7 +468,7 @@ function chanCloseConfirm(
 4. Packet confirmation on machine *B*, module *2* (or packet timeout if the timeout height has passed) (this will require participation of a relayer process)
 5. Acknowledgement (possibly) relayed back from module *2* on machine *B* to module *1* on machine *A*
 
-Represented spatially, packet transit between two machines can be rendered as follows:
+从空间上表示，两台机器之间的数据包传输可以表示如下：
 
 ![Packet Transit](../../../../spec/ics-004-channel-and-packet-semantics/packet-transit.png)
 
@@ -534,7 +534,7 @@ The IBC handler performs the following steps in order:
 - Checks that the packet metadata matches the channel & connection information
 - Checks that the packet sequence is the next sequence the channel end expects to receive (for ordered channels)
 - Checks that the timeout height has not yet passed
-- Checks the inclusion proof of packet data commitment in the outgoing chain's state
+- 在传出链的状态下检查包数据承诺的包含证明
 - Sets the opaque acknowledgement value at a store path unique to the packet (if the acknowledgement is non-empty or the channel is unordered)
 - Increments the packet receive sequence associated with the channel end (ordered channels only)
 
@@ -659,7 +659,7 @@ In the case of an ordered channel, `timeoutPacket` checks the `recvSequence` of 
 
 In the case of an unordered channel, `timeoutPacket` checks the absence of an acknowledgement (which will have been written if the packet was received). Unordered channels are expected to continue in the face of timed-out packets.
 
-If relations are enforced between timeout heights of subsequent packets, safe bulk timeouts of all packets prior to a timed-out packet can be performed. This specification omits details for now.
+如果在后续数据包的超时高度之间建立了关系，则可以对超时的数据包之前的所有数据包执行安全的批量超时。该规范暂时省略了细节。
 
 ```typescript
 function timeoutPacket(
@@ -793,9 +793,9 @@ function timeoutOnClose(
 
 模块调用`cleanupPacket`以从存储中删除收到的数据包承诺。接收端必须已经处理过该数据包（无论是定期清理还是仅针对过去的超时数据包的清理）。
 
-In the ordered channel case, `cleanupPacket` cleans-up a packet on an ordered channel by proving that the packet has been received on the other end.
+在有序通道的情况下， `cleanupPacket`通过证明已在另一端接收到数据包来清理有序通道上的数据包。
 
-In the unordered channel case, `cleanupPacket` cleans-up a packet on an unordered channel by proving that the associated acknowledgement has been written.
+在无序通道的情况下， `cleanupPacket`通过证明已写入关联的确认`cleanupPacket`清理无序通道上的数据包。
 
 ```typescript
 function cleanupPacket(
@@ -855,27 +855,27 @@ function cleanupPacket(
 
 ##### 同时发生握手意图
 
-If two machines simultaneously initiate channel opening handshakes with each other, attempting to use the same identifiers, both will fail and new identifiers must be used.
+如果两台机器同时彼此启动通道打开握手，并尝试使用相同的标识符，则两者都会失败，必须使用新的标识符。
 
-##### Identifier allocation
+##### 标识符分配
 
 在目标链上分配标识符存在不可避免的竞争条件。最好建议模块使用伪随机、不表意的标识符。设法声明另一个模块希望使用的标识符，但是令人烦恼的是，由于不能在握手阶段陷入中间人攻击，因此接收模块必须已经拥有握手所指向的端口。
 
-##### Timeouts / packet confirmation
+##### 超时/数据包确认
 
-There is no race condition between a packet timeout and packet confirmation, as the packet will either have passed the timeout height prior to receipt or not.
+数据包超时和数据包确认之间没有竞争条件，因为数据包在接收之前或已经通过超时高度。
 
-##### Man-in-the-middle attacks during handshakes
+##### 握手期间的中间人攻击
 
 跨链状态的验证可防止连接握手和通道握手的中间人攻击，因为模块已知道所有信息（源、目标客户端、通道等），该信息将启动握手并在握手之前进行确认完成。
 
 ##### 有正在传输数据包时的连接/通道关闭
 
-If a connection or channel is closed while packets are in-flight, the packets can no longer be received on the destination chain and can be timed-out on the source chain.
+如果在传输数据包时关闭了连接或通道，则数据包将不再在目标链上被接收，并且可能在源链上超时。
 
 #### 通道查询
 
-Channels can be queried with `queryChannel`:
+可以使用`queryChannel`查询`queryChannel` ：
 
 ```typescript
 function queryChannel(connId: Identifier, chanId: Identifier): ChannelEnd | void {
@@ -889,11 +889,11 @@ function queryChannel(connId: Identifier, chanId: Identifier): ChannelEnd | void
 - 假设链在超时后仍然存在，并且在发送链上出现了超时并有且仅有一次超时，数据报能够被有且只有一次地传送。
 - 通道握手不能受到区块链上的另一个模块或另一个链的 IBC 处理程序作为中间人进行的攻击。
 
-## Backwards Compatibility
+## 向后兼容
 
 Not applicable.
 
-## Forwards Compatibility
+## 转发兼容性
 
 数据结构和编码可以在连接或通道级别进行版本控制。通道逻辑完全与数据包的数据格式无关，可以由模块在任何时候以自己喜欢的任何方式对其进行更改。
 
@@ -905,9 +905,9 @@ Coming soon.
 
 Coming soon.
 
-## History
+## 历史
 
-Jun 5, 2019 - Draft submitted
+2019年6月5日-提交的草案
 
 Jul 4, 2019 - Modifications for unordered channels & acknowledgements
 
@@ -919,6 +919,6 @@ Aug 13, 2019 - Various edits
 
 Aug 25, 2019 - Cleanup
 
-## Copyright
+## 版权
 
-All content herein is licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+本文中的所有内容均根据[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)获得许可。
